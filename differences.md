@@ -31,7 +31,23 @@ The current dependency-light spectral baseline validates the streaming and measu
 | [Schröter et al., 2022 — DeepFilterNet2](https://arxiv.org/abs/2205.05474) | Efficient deep filtering with harmonic structure and embedded-friendly components | Strong | Limited-to-moderate in the standard denoising focus | Very strong | Practical quality/compute trade-off for full-band audio | This project is a transparent dependency-light baseline; DeepFilterNet2 is a learned full-band reference that should be measured separately when the target runtime is selected. |
 | [Rosenbaum et al., 2025 — Deep-Learning Framework for Efficient Real-Time Speech Enhancement and Dereverberation](https://www.mdpi.com/1424-8220/25/3/630) | Efficient deep filtering extended with explicit dereverberation analysis | Strong | Strong and central | Strong | Closest paper to the joint target | Selected as the base paper. We add causal I/O, data generation, low-power profiling, downstream ASR evaluation, and a replaceable implementation path rather than reproducing the research architecture verbatim. |
 
-## 4. Difference along the important dimensions
+## 4. Dataset choices in the papers and this project
+
+| Paper | Dataset(s) used by the researchers | Why that choice fits the paper | What this project does with the same or a different choice |
+|---|---|---|---|
+| [Valin, 2018 — RNNoise](https://arxiv.org/abs/1709.08243) | Artificial noisy speech built from clean speech sources, including McGill TSP and NTT Multi-Lingual Speech Database. | Clean targets and artificial mixing make a compact low-latency denoiser easier to train and compare. | We use controlled mixtures for the same reproducibility benefit, but add measured room responses and a separate dereverberation objective. |
+| [Li et al., 2017 — WPE + DNN](https://arxiv.org/abs/1708.08251) | 2014 REVERB Challenge data: WSJCAM0 speech, measured RIRs, additive noise, and simulated/real test conditions. | REVERB is designed to test distant speech and dereverberation, which is the paper's central problem. | We plan to use REVERB for formal dereverberation testing. We start with controlled data so streaming, latency, and failure cases can be verified before the larger benchmark. |
+| [Hu et al., 2020 — DCCRN](https://www.isca-archive.org/interspeech_2020/hu20g_interspeech.html) | Simulated WSJ0 + MUSAN mixtures, then DNS Challenge data with large speech/noise collections and simulated RIRs. | WSJ0/MUSAN supports controlled SNR experiments; DNS supplies a common, diverse real-time challenge testbed. | We keep the controlled-mixture idea and plan DNS for broader comparison, but use a smaller staged subset because the project's first constraint is CPU and streaming behavior. |
+| [Schröter et al., 2022 — DeepFilterNet2](https://arxiv.org/abs/2205.05474) | English DNS4 for training; VoiceBank+DEMAND and DNS4 blind test data for evaluation. | DNS4 provides full-band diversity; VoiceBank+DEMAND provides a paired, speaker-exclusive test; the blind set checks generalization. | We take VoiceBank-DEMAND as the first external paired benchmark and DNS as the later broad source. The current fixture remains separate for quick reproducible checks. |
+| [Rosenbaum et al., 2025 — selected base paper](https://www.mdpi.com/1424-8220/25/3/630) | DNS Challenge training data with speech, noise, and room responses; VCTK/DEMAND-style evaluation data. | The data match the joint denoising/dereverberation target and let the authors compare quality with real-time cost. | We retain the comparable DNS/DEMAND direction, then add controlled data, manifests, explicit denoising-only versus joint ablations, CPU/memory/RTF/latency profiling, and downstream ASR checks. |
+
+### Why the datasets are not identical
+
+The project shares DNS, VoiceBank-DEMAND, and REVERB with the literature where this improves comparability. It does not claim to reproduce every paper's exact training split. Full challenge data are large, access and licences differ, and a large training run would make it harder to isolate a causal streaming bug. Controlled mixtures are therefore used first, followed by a small paired external benchmark, then larger DNS and REVERB evaluations.
+
+The evaluation will keep these groups separate: controlled mixtures for repeatability, VoiceBank-DEMAND for paired denoising, DNS for varied noise and reverberation, and REVERB for focused dereverberation. This prevents a synthetic demonstration from being reported as a general human-speech result.
+
+## 5. Difference along the important dimensions
 
 ### Objective
 
@@ -67,7 +83,7 @@ microphone / recording -> enhancement engine -> STT, voice typing,
 
 The enhancement engine can later be replaced by RNNoise, DeepFilterNet, DCCRN, WPE+DNN, or the selected custom model without rebuilding the surrounding measurement and application interface.
 
-## 5. What is distinctive about the current implementation?
+## 6. What is distinctive about the current implementation?
 
 The defensible distinction is the combination and evaluation framing:
 
@@ -79,6 +95,6 @@ The defensible distinction is the combination and evaluation framing:
 
 This is a system-level contribution and an experimental methodology. It should not be described as a new neural architecture until a custom trained model and an appropriate experimental comparison exist.
 
-## 6. Concise project explanation
+## 7. Concise project explanation
 
 > RNNoise taught us that a small hybrid DSP and recurrent model can be useful at very low latency. WPE plus DNN showed that denoising and dereverberation should be considered together. DCCRN showed the value of phase-aware complex modeling. DeepFilterNet2 showed how deep filtering can achieve a strong quality-versus-compute trade-off, while the 2025 efficient dereverberation work is closest to the joint target. The current implementation therefore starts with a transparent causal STFT baseline: conservative spectral noise suppression, a bounded one-delay dereverberation experiment, overlap-add reconstruction, and measurements of SNR, SI-SDR, real-time factor, and latency. The project evaluates enhancement as a reusable streaming front-end for downstream speech systems, not only as an offline waveform cleaner.

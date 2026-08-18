@@ -1,5 +1,7 @@
 # Dataset Collection and Justification
 
+The complete paper-by-paper comparison and project collection decision are in the repository root: [datasets.md](../datasets.md).
+
 ## Purpose
 
 The project needs data that separates additive noise from room reverberation and also supports a fair real-time evaluation. The collection plan therefore uses one supervised denoising benchmark, one broad noise-suppression source, one reverberation benchmark, and controlled mixtures with known clean references.
@@ -51,4 +53,3 @@ python -m realtime_speech_enhancement.dataset data/raw/voicebank_demand/test `
 ## Why this combination is sufficient for the current milestone
 
 VoiceBank-DEMAND gives a clear paired denoising baseline, DNS provides robustness to varied noise and room conditions, REVERB isolates the dereverberation requirement, and controlled mixtures make causal algorithm debugging repeatable. Together they cover the project's two distortions, supervised evaluation, real-world variability, and reproducibility constraints without pretending that one dataset represents every deployment environment.
-
