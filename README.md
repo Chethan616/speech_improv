@@ -1,6 +1,6 @@
-# Review 1: Real-Time Speech Dereverberation / Denoising
+# Real-Time Speech Dereverberation and Denoising
 
-This repository contains only the Review 1 implementation requested from the attached technical brief. It is a dependency-light, single-channel WAV baseline for poor-quality recordings:
+This repository contains a dependency-light, single-channel WAV baseline for real-time enhancement of poor-quality recordings:
 
 `WAV input -> causal STFT frames -> noise suppression -> causal dereverberation experiment -> ISTFT overlap-add -> WAV output`
 
@@ -9,9 +9,9 @@ The implementation is intentionally small enough to profile and explain. It does
 ## Included
 
 - `realtime_speech_enhancement/`: audio I/O, STFT helpers, controlled degradation generation, streaming enhancer, metrics, and CLI.
-- `algorithm.md`: the exact Review 1 algorithm and its assumptions.
+- `algorithm.md`: the implemented algorithm and its assumptions.
 - `workflow.md`: the end-to-end experiment and demonstration workflow.
-- `differences.md`: a faculty-facing comparison of the five papers and this project.
+- `differences.md`: a technical comparison of five papers and this project.
 - `tests/`: focused round-trip, degradation, streaming, and metric checks.
 
 ## Run it
@@ -42,6 +42,6 @@ The evaluation WAVs must be aligned and use the same sample rate. The CLI measur
 
 ## Scope boundary
 
-The attached brief also mentions future product integrations, multiple open-source baselines, downstream Whisper testing, and final deployment choices. Those are not silently represented as completed work here. This folder completes the Review 1 core: controlled data preparation, a causal enhancement baseline, a dereverberation experiment hook, before/after measurement, and explanation material for the five-paper comparison.
+The current implementation covers controlled data preparation, a causal enhancement baseline, a dereverberation experiment hook, before/after measurement, and a technical comparison with five representative papers. Product integrations, external model benchmarking, downstream Whisper testing, and final deployment choices remain explicit extension points rather than undocumented assumptions.
 
-The synthetic demo is a deterministic voiced-like signal for testing the pipeline. It is not a human speech result and should not be presented to faculty as a real speech-quality claim. Use aligned clean/noisy/reverberant recordings for the academic result.
+The synthetic demo is a deterministic voiced-like signal for testing the pipeline. It is not a human-speech result. Use aligned clean/noisy/reverberant recordings for quantitative speech-quality claims.

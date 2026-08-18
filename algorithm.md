@@ -1,8 +1,8 @@
-# Review 1 Algorithm
+# Implementation Algorithm
 
 ## 1. Purpose
 
-The Review 1 implementation is a causal, single-channel baseline for streaming speech enhancement. It targets two distortions at once:
+The current implementation is a causal, single-channel baseline for streaming speech enhancement. It targets two distortions at once:
 
 1. additive/background noise; and
 2. late reverberation or a reverberant tail.
@@ -144,5 +144,4 @@ trim output to input length
 
 ## 8. What this algorithm does and does not prove
 
-It proves that Review 1 has a runnable causal baseline with explicit switches for denoising, dereverberation, chunking, and timing. It does not prove that the baseline is better than the five papers, that it improves real speech, or that it is production-ready. Those claims require aligned human-speech recordings, a speaker-disjoint test set, acoustic metrics, ASR WER, and hardware-specific latency measurements.
-
+It establishes a runnable causal baseline with explicit switches for denoising, dereverberation, chunking, and timing. It does not prove that the baseline is better than the five papers, that it improves real speech, or that it is production-ready. Those claims require aligned human-speech recordings, a speaker-disjoint test set, acoustic metrics, ASR WER, and hardware-specific latency measurements.
