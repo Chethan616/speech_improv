@@ -35,7 +35,10 @@ The engineering problem is to estimate a cleaner speech stream while the input i
 
 The papers provide strong individual solutions, but the project is concerned with the complete streaming path: controlled degradation, causal chunking, enhancement, speech preservation, measured latency, and downstream evaluation. The project baseline therefore serves as an interpretable reference against which stronger neural or WPE-based systems can be compared.
 
+## Base-paper selection
+
+The selected base paper is [Rosenbaum et al., 2025 — Deep-Learning Framework for Efficient Real-Time Speech Enhancement and Dereverberation](https://www.mdpi.com/1424-8220/25/3/630). It is selected because fastness and low processing power are the primary project goals, while the paper directly addresses the limitation of efficient denoising frameworks when they are asked to model late reverberation. The project uses its efficient deep-filtering and delayed-context principles as the next model direction, while adding causal streaming control, reproducible data preparation, low-power profiling, and downstream ASR evaluation.
+
 ## Design decision derived from the survey
 
 The first implementation uses a causal STFT pipeline with conservative spectral suppression and a bounded one-delay complex predictor. This choice is not claimed as a new neural architecture. It is a reproducible reference that exposes the quality/latency trade-off and leaves a clear interface for RNNoise, DeepFilterNet, DCCRN, WPE+DNN, or a custom trained model.
-

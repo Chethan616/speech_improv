@@ -4,7 +4,24 @@
 
 The five papers are research systems that each emphasize a particular modeling idea: hybrid DSP plus a small recurrent network, WPE plus DNN, complex phase-aware recurrence, efficient deep filtering, and efficient deep filtering extended toward dereverberation. This project is a reproducible streaming pipeline built around the application constraint: process poor-quality audio continuously, measure latency, preserve speech, and make the output useful to downstream ASR. The current code is a lightweight causal baseline, not a claim that it already matches any paper's final neural model.
 
-## 2. Comparison table
+## 2. Selected base paper
+
+**Decision: yes.** The selected base paper is [Rosenbaum et al., 2025 — Deep-Learning Framework for Efficient Real-Time Speech Enhancement and Dereverberation](https://www.mdpi.com/1424-8220/25/3/630).
+
+This is the most appropriate architectural base for the project because the primary goals are fastness and low processing power. The paper starts from efficient deep filtering, identifies why a short input context limits dereverberation, and adds delayed information to model late reflections. It also evaluates the trade-off between simultaneous and two-step processing using computational-efficiency measures. Its reported comparison of parameter count, MACs per second, and real-time factor gives the project a concrete way to discuss quality versus compute.
+
+The project is not a reproduction of the paper. The paper supplies the design direction; this project adds the surrounding reproducible system and deployment evidence:
+
+- causal microphone/WAV chunking with explicit bounded latency;
+- controlled noisy and reverberant data generation plus dataset manifests;
+- denoising-only versus joint denoising/dereverberation ablations;
+- CPU, memory, model-size, real-time-factor, and end-to-end-latency measurements;
+- downstream ASR WER comparison when aligned speech and an ASR model are available; and
+- failure-case analysis under noise, reverberation, silence, and speech-preservation stress.
+
+The current dependency-light spectral baseline validates the streaming and measurement path first. The next enhancement-engine replacement should be an efficient DeepFilterNet-family model aligned with the selected paper's delayed dereverberation principle.
+
+## 3. Comparison table
 
 | Paper | Main representation / algorithm | Noise handling | Dereverberation | Real-time emphasis | Main strength | Difference from this project |
 |---|---|---|---|---|---|---|
@@ -12,9 +29,9 @@ The five papers are research systems that each emphasize a particular modeling i
 | [Li et al., 2017 — Integrated Speech Enhancement Method Based on WPE and DNN for Dereverberation and Denoising](https://arxiv.org/abs/1708.08251) | WPE with a DNN that supports noise suppression and speech-variance estimation | Jointly addressed | Strong | Moderate | Directly combines denoising and dereverberation | This project uses a bounded one-delay causal predictor for the first experiment; it is simpler and easier to profile, but it is not full WPE and should not be presented as equivalent. |
 | [Hu et al., 2020 — DCCRN: Deep Complex Convolution Recurrent Network for Phase-Aware Speech Enhancement](https://www.isca-archive.org/interspeech_2020/hu20g_interspeech.html) | Complex convolution and recurrent modeling of complex spectra | Strong | Can help through phase-aware mapping | Strong | Shows why phase and compact complex models matter | This project keeps complex spectra at the signal-processing boundary but does not yet learn a complex mask or complex mapping. |
 | [Schröter et al., 2022 — DeepFilterNet2](https://arxiv.org/abs/2205.05474) | Efficient deep filtering with harmonic structure and embedded-friendly components | Strong | Limited-to-moderate in the standard denoising focus | Very strong | Practical quality/compute trade-off for full-band audio | This project is a transparent dependency-light baseline; DeepFilterNet2 is a learned full-band reference that should be measured separately when the target runtime is selected. |
-| [Rosenbaum et al., 2025 — Deep-Learning Framework for Efficient Real-Time Speech Enhancement and Dereverberation](https://www.mdpi.com/1424-8220/25/3/630) | Efficient deep filtering extended with explicit dereverberation analysis | Strong | Strong and central | Strong | Closest paper to the joint target | This project shares the joint real-time goal but is an implementation baseline with a simpler causal predictor and an explicit evaluation workflow, not a reproduction of the research architecture. |
+| [Rosenbaum et al., 2025 — Deep-Learning Framework for Efficient Real-Time Speech Enhancement and Dereverberation](https://www.mdpi.com/1424-8220/25/3/630) | Efficient deep filtering extended with explicit dereverberation analysis | Strong | Strong and central | Strong | Closest paper to the joint target | Selected as the base paper. We add causal I/O, data generation, low-power profiling, downstream ASR evaluation, and a replaceable implementation path rather than reproducing the research architecture verbatim. |
 
-## 3. Difference along the important dimensions
+## 4. Difference along the important dimensions
 
 ### Objective
 
@@ -50,7 +67,7 @@ microphone / recording -> enhancement engine -> STT, voice typing,
 
 The enhancement engine can later be replaced by RNNoise, DeepFilterNet, DCCRN, WPE+DNN, or the selected custom model without rebuilding the surrounding measurement and application interface.
 
-## 4. What is distinctive about the current implementation?
+## 5. What is distinctive about the current implementation?
 
 The defensible distinction is the combination and evaluation framing:
 
@@ -62,6 +79,6 @@ The defensible distinction is the combination and evaluation framing:
 
 This is a system-level contribution and an experimental methodology. It should not be described as a new neural architecture until a custom trained model and an appropriate experimental comparison exist.
 
-## 5. Concise project explanation
+## 6. Concise project explanation
 
 > RNNoise taught us that a small hybrid DSP and recurrent model can be useful at very low latency. WPE plus DNN showed that denoising and dereverberation should be considered together. DCCRN showed the value of phase-aware complex modeling. DeepFilterNet2 showed how deep filtering can achieve a strong quality-versus-compute trade-off, while the 2025 efficient dereverberation work is closest to the joint target. The current implementation therefore starts with a transparent causal STFT baseline: conservative spectral noise suppression, a bounded one-delay dereverberation experiment, overlap-add reconstruction, and measurements of SNR, SI-SDR, real-time factor, and latency. The project evaluates enhancement as a reusable streaming front-end for downstream speech systems, not only as an offline waveform cleaner.
