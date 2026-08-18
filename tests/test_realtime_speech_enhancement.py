@@ -12,6 +12,7 @@ from realtime_speech_enhancement.enhancer import EnhancerConfig, enhance_audio
 from realtime_speech_enhancement.metrics import evaluate_quality
 from realtime_speech_enhancement.stft import istft, stft
 from realtime_speech_enhancement.audio import write_wav
+from realtime_speech_enhancement.cli import _enhancer_config, build_parser
 
 
 class RealtimeSpeechEnhancementTests(unittest.TestCase):
@@ -53,6 +54,16 @@ class RealtimeSpeechEnhancementTests(unittest.TestCase):
             self.assertEqual(manifest["file_count"], 1)
             self.assertEqual(manifest["sample_rates_hz"], [16000])
             self.assertEqual(manifest["errors"], [])
+
+    def test_strong_denoise_profile_scales_for_48khz(self) -> None:
+        args = build_parser().parse_args(
+            ["enhance", "input.wav", "--output", "output.wav", "--profile", "strong-denoise"]
+        )
+        config = _enhancer_config(args, 48000)
+        self.assertEqual(config.frame_size, 2048)
+        self.assertEqual(config.hop_size, 512)
+        self.assertEqual(config.noise_frames, 1)
+        self.assertEqual(config.dereverb_strength, 0.0)
 
 
 if __name__ == "__main__":

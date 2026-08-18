@@ -62,4 +62,10 @@ python -m realtime_speech_enhancement.dataset data/raw/voicebank_demand/test `
 
 ## 6. Practical decision for the current milestone
 
-The current milestone uses the controlled fixture because it is immediately reproducible and does not require redistributing external audio. The next data milestone is a small VoiceBank-DEMAND subset, followed by an approved DNS subset and then REVERB when formal dereverberation testing is required. This order supports the project's main constraint: demonstrate useful processing with low latency and low CPU cost before increasing dataset and model size.
+The current milestone uses the controlled fixture for software smoke tests and the supplied paired test set for an external denoising check. The next data milestone is an approved DNS subset, followed by REVERB when formal dereverberation testing is required. This order supports the project's main constraint: demonstrate useful processing with low latency and low CPU cost before increasing dataset and model size.
+
+## 7. Supplied paired test set
+
+The current local test set supplied for evaluation contains 824 matching clean/noisy WAV pairs. The files are mono, 16-bit PCM, and sampled at 48 kHz. It is suitable for the first external denoising benchmark because every noisy filename has a corresponding clean reference.
+
+The files were processed with the `strong-denoise` profile and evaluated with the matching clean references. The measured mean improvements were approximately +3.997 dB SNR and +3.752 dB SI-SDR. These measurements describe the supplied local split and should be reported as an experiment on that split, not as a universal claim about every recording or every VoiceBank/DNS configuration.

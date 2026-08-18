@@ -19,6 +19,7 @@ class EnhancerConfig:
     frame_size: int = 512
     hop_size: int = 128
     noise_frames: int = 8
+    noise_bootstrap_percentile: float = 35.0
     suppression_strength: float = 0.85
     gain_floor: float = 0.12
     noise_update_rate: float = 0.02
@@ -31,6 +32,8 @@ class EnhancerConfig:
             raise ValueError("Require frame_size >= 4 and 0 < hop_size <= frame_size")
         if self.noise_frames < 1:
             raise ValueError("noise_frames must be positive")
+        if not 0.0 <= self.noise_bootstrap_percentile <= 100.0:
+            raise ValueError("noise_bootstrap_percentile must be in [0, 100]")
         if not 0.0 <= self.suppression_strength <= 1.0:
             raise ValueError("suppression_strength must be in [0, 1]")
         if not 0.0 < self.gain_floor <= 1.0:
@@ -69,7 +72,11 @@ class StreamingEnhancer:
         if self.noise_power is None:
             self.noise_bootstrap.append(power.copy())
             if len(self.noise_bootstrap) >= self.config.noise_frames:
-                self.noise_power = np.mean(self.noise_bootstrap, axis=0)
+                self.noise_power = np.percentile(
+                    np.stack(self.noise_bootstrap, axis=0),
+                    self.config.noise_bootstrap_percentile,
+                    axis=0,
+                )
             return False
 
         frame_power = float(np.mean(power))
@@ -85,7 +92,12 @@ class StreamingEnhancer:
         power = np.abs(spectrum) ** 2
         speech_present = self._noise_and_vad(power)
         if self.noise_power is None:
-            self.noise_power = power.copy()
+            # Do not treat the first speech frame as the complete noise PSD.
+            # During bootstrap, pass the frame through and wait for the
+            # configured robust estimate to be ready.
+            self.history.append(spectrum.astype(np.complex128).copy())
+            self.processed_frames += 1
+            return spectrum.astype(np.complex128)
 
         noise = np.maximum(self.noise_power, epsilon)
         gain = 1.0 - self.config.suppression_strength * noise / (power + epsilon)
@@ -191,4 +203,3 @@ def enhance_audio(
     if result.size < samples.size:
         result = np.pad(result, (0, samples.size - result.size))
     return result[: samples.size].astype(np.float32)
-

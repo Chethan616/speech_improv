@@ -45,6 +45,27 @@ python -m realtime_speech_enhancement evaluate --clean clean.wav --degraded inpu
 
 The evaluation WAVs must be aligned and use the same sample rate. The CLI measures SNR, SI-SDR, processing time, real-time factor, and the configured algorithmic latency. PESQ, STOI, and WER are explicitly left as optional follow-up measurements rather than invented values.
 
+For a noisy 48 kHz speech test set, use the stronger dataset profile:
+
+```powershell
+python -m realtime_speech_enhancement enhance-batch input_folder `
+  --output-root artifacts/noisy_testset_enhanced `
+  --report-dir artifacts/noisy_testset_reports `
+  --profile strong-denoise
+```
+
+The batch command preserves the input folder structure and writes one JSON timing report per WAV. It does not calculate quality metrics by itself; use `evaluate` when aligned clean files are available.
+
+For matching clean, degraded, and enhanced folders, calculate dataset-level means with:
+
+```powershell
+python -m realtime_speech_enhancement evaluate-batch `
+  --clean-root clean_folder `
+  --degraded-root input_folder `
+  --enhanced-root artifacts/noisy_testset_enhanced `
+  --report artifacts/noisy_testset_reports/dataset_evaluation_summary.json
+```
+
 ## Scope boundary
 
 The current implementation covers controlled data preparation, a causal enhancement baseline, a dereverberation experiment hook, before/after measurement, and a technical comparison with five representative papers. Product integrations, external model benchmarking, downstream Whisper testing, and final deployment choices remain explicit extension points rather than undocumented assumptions.

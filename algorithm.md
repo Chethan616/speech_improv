@@ -46,12 +46,23 @@ The default configuration is:
 | Frame size | 512 samples | Analysis window and maximum frame look-ahead. |
 | Hop size | 128 samples | 75% overlap for smooth overlap-add reconstruction. |
 | Noise bootstrap | 8 frames | Initial PSD estimate; the start of the file should contain useful noise context. |
+| Bootstrap estimate | 35th percentile | Reduces the chance that one loud speech frame becomes the complete noise estimate. |
 | Gain floor | 0.12 | Prevents complete removal of speech frequency bins. |
 | Suppression strength | 0.85 | Controls the conservative spectral suppression. |
 | Dereverb strength | 0.20 | Strength of the causal one-delay predictor subtraction. |
 | Predictor delay | 2 frames | Uses permitted history only; no future frames are used. |
 
-For sample rate `f_s`, the nominal algorithmic frame latency is `512 / f_s` seconds. The measured real-time factor includes the actual machine, Python runtime, input length, and chunk size.
+For external noisy speech data, the command also provides named profiles:
+
+| Profile | Intended use | Main settings at 48 kHz |
+|---|---|---|
+| `low-latency` | Live or interactive processing | 512/128 frame-hop, conservative suppression, dereverberation experiment enabled. |
+| `balanced` | General-purpose comparison | 1024/256 frame-hop, moderate suppression, lighter dereverberation. |
+| `strong-denoise` | Noisy speech test sets such as the supplied 48 kHz paired set | 2048/512 frame-hop, stronger suppression, 0.05 gain floor, dereverberation disabled. |
+
+The `strong-denoise` profile is intentionally a denoising configuration. A noisy-only benchmark should not be judged using the simple dereverberation predictor because subtracting a delayed component can distort clean speech when room reverberation is not the target condition.
+
+For sample rate `f_s`, the nominal algorithmic frame latency is `frame_size / f_s` seconds. The measured real-time factor includes the actual machine, Python runtime, input length, and chunk size.
 
 ## 4. Noise suppression
 
@@ -62,7 +73,7 @@ X_t = RFFT(window * x_t)
 P_t = |X_t|^2
 ```
 
-During the bootstrap period, `P_t` is averaged to form a noise power spectral density estimate `N_t`. When a later frame is below the simple energy-based voice-activity threshold, the estimate is updated slowly:
+During the bootstrap period, the implementation collects `P_t` and uses a robust percentile to form a noise power spectral density estimate `N_t`. Frames are passed through until this estimate is ready, so the first speech frame is not silently treated as the entire noise profile. When a later frame is below the simple energy-based voice-activity threshold, the estimate is updated slowly:
 
 ```text
 N_t = (1 - alpha) * N_(t-1) + alpha * P_t

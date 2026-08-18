@@ -56,3 +56,27 @@ The command produces:
 
 The controlled result demonstrates that the implementation executes end to end and improves the chosen objective measures on this fixture. It does not establish general speech quality, speaker preservation, or ASR improvement. Those require the collected datasets and a documented human-speech evaluation split.
 
+## Paired noisy-speech test-set result
+
+An additional local benchmark was run using a supplied paired test set with 824 matching clean and noisy WAV files. Every file is mono, 16-bit PCM, and sampled at 48 kHz. The `strong-denoise` profile was used because this set is a noisy-speech benchmark rather than a reverberation-only benchmark:
+
+```powershell
+python -m realtime_speech_enhancement enhance-batch `
+  "path\to\noisy_testset_wav" `
+  --output-root artifacts/noisy_testset_enhanced `
+  --report-dir artifacts/noisy_testset_reports `
+  --profile strong-denoise
+
+python -m realtime_speech_enhancement evaluate-batch `
+  --clean-root "path\to\clean_testset_wav\clean_testset_wav" `
+  --degraded-root "path\to\noisy_testset_wav" `
+  --enhanced-root artifacts/noisy_testset_enhanced `
+  --report artifacts/noisy_testset_reports/dataset_evaluation_summary.json
+```
+
+| Metric | Mean input | Mean enhanced | Mean change |
+|---|---:|---:|---:|
+| SNR | 8.395 dB | 12.392 dB | +3.997 dB |
+| SI-SDR | 8.394 dB | 12.146 dB | +3.752 dB |
+
+The batch processed 2,072 seconds of audio in about 51.1 seconds on the measurement machine, giving a batch real-time factor of approximately 0.0247. The 2048-sample frame corresponds to approximately 42.7 ms nominal frame latency at 48 kHz. These values describe this aligned local test set and machine; they are not a universal benchmark or a substitute for PESQ, STOI, DNSMOS, or ASR WER.

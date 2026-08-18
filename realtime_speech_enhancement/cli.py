@@ -48,19 +48,68 @@ def _synthetic_voiced_fixture(sample_rate: int, duration: float, seed: int = 11)
     return (0.72 * signal / peak).astype(np.float32)
 
 
-def _enhancer_config(args: argparse.Namespace) -> EnhancerConfig:
+def _profile_defaults(profile: str, sample_rate: int) -> dict[str, float | int]:
+    """Return settings tuned for the input type without hiding the choices."""
+
+    if profile == "strong-denoise":
+        frame_size = 2048 if sample_rate >= 32000 else 1024
+        return {
+            "frame_size": frame_size,
+            "hop_size": frame_size // 4,
+            "noise_frames": 1,
+            "noise_bootstrap_percentile": 35.0,
+            "suppression_strength": 1.0,
+            "gain_floor": 0.05,
+            "dereverb_strength": 0.0,
+        }
+    if profile == "balanced":
+        frame_size = 1024 if sample_rate >= 32000 else 512
+        return {
+            "frame_size": frame_size,
+            "hop_size": frame_size // 4,
+            "noise_frames": 8,
+            "noise_bootstrap_percentile": 35.0,
+            "suppression_strength": 0.90,
+            "gain_floor": 0.08,
+            "dereverb_strength": 0.10,
+        }
+    return {
+        "frame_size": 512,
+        "hop_size": 128,
+        "noise_frames": 8,
+        "noise_bootstrap_percentile": 35.0,
+        "suppression_strength": 0.85,
+        "gain_floor": 0.12,
+        "dereverb_strength": 0.20,
+    }
+
+
+def _enhancer_config(args: argparse.Namespace, sample_rate: int) -> EnhancerConfig:
+    defaults = _profile_defaults(args.profile, sample_rate)
+
+    def value(name: str):
+        configured = getattr(args, name)
+        return defaults[name] if configured is None else configured
+
     return EnhancerConfig(
-        frame_size=args.frame_size,
-        hop_size=args.hop_size,
-        noise_frames=args.noise_frames,
-        suppression_strength=args.suppression_strength,
-        gain_floor=args.gain_floor,
-        dereverb_strength=args.dereverb_strength,
-        dereverb_delay_frames=args.dereverb_delay_frames,
+        frame_size=int(value("frame_size")),
+        hop_size=int(value("hop_size")),
+        noise_frames=int(value("noise_frames")),
+        noise_bootstrap_percentile=float(value("noise_bootstrap_percentile")),
+        suppression_strength=float(value("suppression_strength")),
+        gain_floor=float(value("gain_floor")),
+        dereverb_strength=float(value("dereverb_strength")),
+        dereverb_delay_frames=int(value("dereverb_delay_frames")),
     )
 
 
-def _enhance_with_report(samples: np.ndarray, sample_rate: int, config: EnhancerConfig, chunk_size: int) -> tuple[np.ndarray, dict]:
+def _enhance_with_report(
+    samples: np.ndarray,
+    sample_rate: int,
+    config: EnhancerConfig,
+    chunk_size: int,
+    profile: str,
+) -> tuple[np.ndarray, dict]:
     started = time.perf_counter()
     enhanced = enhance_audio(samples, config=config, chunk_size=chunk_size)
     elapsed = time.perf_counter() - started
@@ -73,10 +122,12 @@ def _enhance_with_report(samples: np.ndarray, sample_rate: int, config: Enhancer
         "real_time_factor": real_time_factor(elapsed, duration),
         "algorithmic_latency_seconds": config.frame_size / sample_rate,
         "chunk_size_samples": chunk_size,
+        "profile": profile,
         "config": {
             "frame_size": config.frame_size,
             "hop_size": config.hop_size,
             "noise_frames": config.noise_frames,
+            "noise_bootstrap_percentile": config.noise_bootstrap_percentile,
             "suppression_strength": config.suppression_strength,
             "gain_floor": config.gain_floor,
             "dereverb_strength": config.dereverb_strength,
@@ -125,12 +176,64 @@ def cmd_generate(args: argparse.Namespace) -> None:
 
 def cmd_enhance(args: argparse.Namespace) -> None:
     audio = read_wav(args.input)
-    config = _enhancer_config(args)
-    enhanced, report = _enhance_with_report(audio.samples, audio.sample_rate, config, args.chunk_size)
+    config = _enhancer_config(args, audio.sample_rate)
+    enhanced, report = _enhance_with_report(audio.samples, audio.sample_rate, config, args.chunk_size, args.profile)
     write_wav(args.output, enhanced, audio.sample_rate)
     if args.report:
         _write_json(args.report, report)
     print(json.dumps(report, indent=2, allow_nan=False))
+
+
+def cmd_enhance_batch(args: argparse.Namespace) -> None:
+    input_root = Path(args.input_root).resolve()
+    output_root = Path(args.output_root).resolve()
+    report_root = Path(args.report_dir).resolve() if args.report_dir else output_root.parent / f"{output_root.name}_reports"
+    if not input_root.is_dir():
+        raise ValueError(f"Input directory does not exist: {input_root}")
+    if output_root == input_root or input_root in output_root.parents:
+        raise ValueError("Output directory must be separate from and outside the input directory")
+
+    input_paths = sorted(input_root.rglob("*.wav"))
+    if not input_paths:
+        raise ValueError(f"No WAV files found under {input_root}")
+
+    started = time.perf_counter()
+    total_audio_seconds = 0.0
+    processed = 0
+    for input_path in input_paths:
+        relative_path = input_path.relative_to(input_root)
+        output_path = output_root / relative_path
+        report_path = report_root / relative_path.with_suffix(".json")
+        audio = read_wav(input_path)
+        config = _enhancer_config(args, audio.sample_rate)
+        enhanced, report = _enhance_with_report(audio.samples, audio.sample_rate, config, args.chunk_size, args.profile)
+        write_wav(output_path, enhanced, audio.sample_rate)
+        report.update(
+            {
+                "input_file": str(input_path),
+                "output_file": str(output_path),
+                "batch_profile": args.profile,
+            }
+        )
+        _write_json(report_path, report)
+        total_audio_seconds += report["input_duration_seconds"]
+        processed += 1
+        print(f"[{processed}/{len(input_paths)}] {relative_path}")
+
+    elapsed = time.perf_counter() - started
+    summary = {
+        "input_root": str(input_root),
+        "output_root": str(output_root),
+        "report_root": str(report_root),
+        "profile": args.profile,
+        "file_count": processed,
+        "audio_duration_seconds": total_audio_seconds,
+        "batch_processing_seconds": elapsed,
+        "batch_real_time_factor": elapsed / total_audio_seconds if total_audio_seconds else None,
+        "note": "This batch command enhances files independently; it does not calculate quality metrics without aligned clean references.",
+    }
+    _write_json(report_root / "batch_summary.json", summary)
+    print(json.dumps(summary, indent=2, allow_nan=False))
 
 
 def cmd_evaluate(args: argparse.Namespace) -> None:
@@ -154,6 +257,57 @@ def cmd_evaluate(args: argparse.Namespace) -> None:
     print(json.dumps(report, indent=2, allow_nan=False))
 
 
+def cmd_evaluate_batch(args: argparse.Namespace) -> None:
+    clean_root = Path(args.clean_root).resolve()
+    degraded_root = Path(args.degraded_root).resolve()
+    enhanced_root = Path(args.enhanced_root).resolve()
+    if not clean_root.is_dir() or not degraded_root.is_dir() or not enhanced_root.is_dir():
+        raise ValueError("Clean, degraded, and enhanced roots must all be existing directories")
+
+    totals = {
+        "snr_input_db": 0.0,
+        "snr_output_db": 0.0,
+        "snr_improvement_db": 0.0,
+        "si_sdr_input_db": 0.0,
+        "si_sdr_output_db": 0.0,
+        "si_sdr_improvement_db": 0.0,
+    }
+    evaluated = 0
+    skipped: list[str] = []
+    for degraded_path in sorted(degraded_root.rglob("*.wav")):
+        relative_path = degraded_path.relative_to(degraded_root)
+        clean_path = clean_root / relative_path
+        enhanced_path = enhanced_root / relative_path
+        if not clean_path.exists() or not enhanced_path.exists():
+            skipped.append(str(relative_path))
+            continue
+        clean = read_wav(clean_path)
+        degraded = read_wav(degraded_path)
+        enhanced = read_wav(enhanced_path)
+        if not (clean.sample_rate == degraded.sample_rate == enhanced.sample_rate):
+            raise ValueError(f"Sample-rate mismatch for {relative_path}")
+        report = evaluate_quality(clean.samples, degraded.samples, enhanced.samples)
+        for key in totals:
+            totals[key] += float(report[key])
+        evaluated += 1
+
+    if evaluated == 0:
+        raise ValueError("No matching clean, degraded, and enhanced WAV triplets were found")
+    summary = {
+        "clean_root": str(clean_root),
+        "degraded_root": str(degraded_root),
+        "enhanced_root": str(enhanced_root),
+        "file_count": evaluated,
+        "skipped_count": len(skipped),
+        "skipped_files": skipped,
+        **{f"mean_{key}": value / evaluated for key, value in totals.items()},
+        "warning": "These means describe only the aligned WAV triplets found in these directories.",
+    }
+    if args.report:
+        _write_json(args.report, summary)
+    print(json.dumps(summary, indent=2, allow_nan=False))
+
+
 def cmd_demo(args: argparse.Namespace) -> None:
     out_dir = Path(args.out_dir)
     generate_args = argparse.Namespace(
@@ -167,8 +321,8 @@ def cmd_demo(args: argparse.Namespace) -> None:
     cmd_generate(generate_args)
     input_path = out_dir / "noisy_reverberant_fixture.wav"
     audio = read_wav(input_path)
-    config = _enhancer_config(args)
-    enhanced, timing = _enhance_with_report(audio.samples, audio.sample_rate, config, args.chunk_size)
+    config = _enhancer_config(args, audio.sample_rate)
+    enhanced, timing = _enhance_with_report(audio.samples, audio.sample_rate, config, args.chunk_size, args.profile)
     enhanced_path = out_dir / "enhanced_fixture.wav"
     write_wav(enhanced_path, enhanced, audio.sample_rate)
     clean = read_wav(out_dir / "clean_fixture.wav")
@@ -180,12 +334,19 @@ def cmd_demo(args: argparse.Namespace) -> None:
 
 
 def _add_algorithm_options(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--frame-size", type=int, default=512)
-    parser.add_argument("--hop-size", type=int, default=128)
-    parser.add_argument("--noise-frames", type=int, default=8)
-    parser.add_argument("--suppression-strength", type=float, default=0.85)
-    parser.add_argument("--gain-floor", type=float, default=0.12)
-    parser.add_argument("--dereverb-strength", type=float, default=0.20)
+    parser.add_argument(
+        "--profile",
+        choices=("low-latency", "balanced", "strong-denoise"),
+        default="low-latency",
+        help="choose defaults for low latency, balanced enhancement, or noisy speech test sets",
+    )
+    parser.add_argument("--frame-size", type=int, default=None)
+    parser.add_argument("--hop-size", type=int, default=None)
+    parser.add_argument("--noise-frames", type=int, default=None)
+    parser.add_argument("--noise-bootstrap-percentile", type=float, default=None)
+    parser.add_argument("--suppression-strength", type=float, default=None)
+    parser.add_argument("--gain-floor", type=float, default=None)
+    parser.add_argument("--dereverb-strength", type=float, default=None)
     parser.add_argument("--dereverb-delay-frames", type=int, default=2)
     parser.add_argument("--chunk-size", type=int, default=256)
 
@@ -210,12 +371,28 @@ def build_parser() -> argparse.ArgumentParser:
     _add_algorithm_options(enhance)
     enhance.set_defaults(function=cmd_enhance)
 
+    batch = subparsers.add_parser("enhance-batch", help="enhance every WAV under a directory")
+    batch.add_argument("input_root")
+    batch.add_argument("--output-root", required=True)
+    batch.add_argument("--report-dir")
+    _add_algorithm_options(batch)
+    batch.set_defaults(function=cmd_enhance_batch)
+
     evaluate = subparsers.add_parser("evaluate", help="compute aligned before/after objective metrics")
     evaluate.add_argument("--clean", required=True)
     evaluate.add_argument("--degraded", required=True)
     evaluate.add_argument("--enhanced", required=True)
     evaluate.add_argument("--report")
     evaluate.set_defaults(function=cmd_evaluate)
+
+    evaluate_batch = subparsers.add_parser(
+        "evaluate-batch", help="evaluate matching clean, degraded, and enhanced WAV folders"
+    )
+    evaluate_batch.add_argument("--clean-root", required=True)
+    evaluate_batch.add_argument("--degraded-root", required=True)
+    evaluate_batch.add_argument("--enhanced-root", required=True)
+    evaluate_batch.add_argument("--report")
+    evaluate_batch.set_defaults(function=cmd_evaluate_batch)
 
     demo = subparsers.add_parser("demo", help="generate, enhance, and evaluate a synthetic smoke-test fixture")
     demo.add_argument("--out-dir", default="artifacts/realtime_speech_enhancement_demo")

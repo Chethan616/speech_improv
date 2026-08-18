@@ -64,6 +64,18 @@ python -m realtime_speech_enhancement enhance input.wav `
 
 The reported real-time factor is processing time divided by audio duration. Values below `1.0` mean that this run processed faster than real time on that machine. The configured frame latency is reported separately because RTF and interactive latency are different quantities.
 
+For the supplied 48 kHz noisy speech test set, use the dataset-tuned profile and batch command:
+
+```powershell
+python -m realtime_speech_enhancement enhance-batch `
+  "C:\path\to\noisy_testset_wav" `
+  --output-root artifacts/noisy_testset_enhanced `
+  --report-dir artifacts/noisy_testset_reports `
+  --profile strong-denoise
+```
+
+This profile uses a longer frequency-analysis window and stronger denoising. It disables the small dereverberation predictor because the paired noisy-speech test is being used first as a denoising benchmark. Use `--profile low-latency` when the priority is the smallest interactive frame latency.
+
 ### Step 4: compare before and after
 
 ```powershell
@@ -75,6 +87,18 @@ python -m realtime_speech_enhancement evaluate `
 ```
 
 The report contains input/output SNR and SI-SDR plus their improvements. For the academic version, add PESQ/STOI if the chosen implementations are installed and run the enhanced audio through the selected ASR system to obtain WER before and after enhancement.
+
+For a paired directory with matching clean and degraded filenames, run the evaluation command once per pair or use a small evaluation script that preserves the same filename mapping. The batch enhancement command produces timing reports but intentionally does not assume that a clean reference exists.
+
+The repository also provides a paired-folder evaluator:
+
+```powershell
+python -m realtime_speech_enhancement evaluate-batch `
+  --clean-root clean_folder `
+  --degraded-root input_folder `
+  --enhanced-root artifacts/noisy_testset_enhanced `
+  --report artifacts/noisy_testset_reports/dataset_evaluation_summary.json
+```
 
 ### Step 5: inspect failure cases
 
