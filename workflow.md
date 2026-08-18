@@ -15,13 +15,13 @@ python -m unittest discover -s tests -v
 Then run the deterministic end-to-end fixture:
 
 ```powershell
-python -m review1 demo --out-dir artifacts/review1_demo
+python -m realtime_speech_enhancement demo --out-dir artifacts/realtime_speech_enhancement_demo
 ```
 
 This creates:
 
 ```text
-artifacts/review1_demo/
+artifacts/realtime_speech_enhancement_demo/
   clean_fixture.wav
   reverberant_fixture.wav
   noisy_reverberant_fixture.wav
@@ -46,7 +46,7 @@ Suitable Review 1 starting points from the brief are VoiceBank-DEMAND for superv
 When a clean reference and a noise recording are available:
 
 ```powershell
-python -m review1 generate --out-dir artifacts/review1_fixture --snr-db 5 --rt60 0.35
+python -m realtime_speech_enhancement generate --out-dir artifacts/realtime_speech_enhancement_fixture --snr-db 5 --rt60 0.35
 ```
 
 The generator is primarily a controlled development fixture. For the final report, document the source speech, noise type, SNR, room impulse response or measured room, and speaker split.
@@ -54,7 +54,7 @@ The generator is primarily a controlled development fixture. For the final repor
 ### Step 3: run streaming enhancement
 
 ```powershell
-python -m review1 enhance input.wav `
+python -m realtime_speech_enhancement enhance input.wav `
   --output artifacts/enhanced.wav `
   --report artifacts/enhancement.json `
   --chunk-size 256
@@ -65,7 +65,7 @@ The reported real-time factor is processing time divided by audio duration. Valu
 ### Step 4: compare before and after
 
 ```powershell
-python -m review1 evaluate `
+python -m realtime_speech_enhancement evaluate `
   --clean clean.wav `
   --degraded input.wav `
   --enhanced artifacts/enhanced.wav `
@@ -111,4 +111,3 @@ Record when consonants disappear, the voice becomes metallic, reverberant tails 
 - [ ] Optional PESQ/STOI/WER measurements supplied after selecting the evaluation tools and ASR model.
 
 The last two items are data-dependent evidence collection, not missing software scaffolding. They cannot be honestly filled without the recordings and measurement choices.
-

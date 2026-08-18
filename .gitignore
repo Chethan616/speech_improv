@@ -6,5 +6,4 @@ dist/
 build/
 *.egg-info/
 artifacts/
-review1_demo/
-
+realtime_speech_enhancement_demo/

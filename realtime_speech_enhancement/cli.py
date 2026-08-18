@@ -195,7 +195,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     generate = subparsers.add_parser("generate", help="generate a controlled synthetic degradation fixture")
-    generate.add_argument("--out-dir", default="artifacts/review1_fixture")
+    generate.add_argument("--out-dir", default="artifacts/realtime_speech_enhancement_fixture")
     generate.add_argument("--sample-rate", type=int, default=16000)
     generate.add_argument("--duration", type=float, default=5.0)
     generate.add_argument("--snr-db", type=float, default=5.0)
@@ -218,7 +218,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.set_defaults(function=cmd_evaluate)
 
     demo = subparsers.add_parser("demo", help="generate, enhance, and evaluate a synthetic smoke-test fixture")
-    demo.add_argument("--out-dir", default="artifacts/review1_demo")
+    demo.add_argument("--out-dir", default="artifacts/realtime_speech_enhancement_demo")
     demo.add_argument("--sample-rate", type=int, default=16000)
     demo.add_argument("--duration", type=float, default=5.0)
     demo.add_argument("--snr-db", type=float, default=5.0)
@@ -233,4 +233,3 @@ def main(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
     args.function(args)
-

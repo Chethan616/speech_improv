@@ -4,13 +4,13 @@ import unittest
 
 import numpy as np
 
-from review1.degradation import degrade_audio
-from review1.enhancer import EnhancerConfig, enhance_audio
-from review1.metrics import evaluate_quality
-from review1.stft import istft, stft
+from realtime_speech_enhancement.degradation import degrade_audio
+from realtime_speech_enhancement.enhancer import EnhancerConfig, enhance_audio
+from realtime_speech_enhancement.metrics import evaluate_quality
+from realtime_speech_enhancement.stft import istft, stft
 
 
-class Review1Tests(unittest.TestCase):
+class RealtimeSpeechEnhancementTests(unittest.TestCase):
     def test_stft_round_trip(self) -> None:
         signal = np.sin(np.linspace(0.0, 40.0, 4096, endpoint=False)).astype(np.float32)
         spectra, length = stft(signal, frame_size=256, hop_size=64)
@@ -44,4 +44,3 @@ class Review1Tests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

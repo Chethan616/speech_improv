@@ -3,12 +3,11 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "review1-speech-enhancement"
+name = "realtime-speech-enhancement"
 version = "0.1.0"
-description = "Focused Review 1 baseline for streaming speech denoising and dereverberation"
+description = "Low-latency speech denoising and dereverberation baseline"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
 
 [tool.setuptools.packages.find]
-include = ["review1*"]
-
+include = ["realtime_speech_enhancement*"]
