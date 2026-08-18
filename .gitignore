@@ -7,3 +7,5 @@ build/
 *.egg-info/
 artifacts/
 realtime_speech_enhancement_demo/
+data/raw/
+data/processed/

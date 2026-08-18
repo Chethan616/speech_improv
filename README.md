@@ -8,7 +8,12 @@ The implementation is intentionally small enough to profile and explain. It does
 
 ## Included
 
-- `realtime_speech_enhancement/`: audio I/O, STFT helpers, controlled degradation generation, streaming enhancer, metrics, and CLI.
+- `realtime_speech_enhancement/`: audio I/O, STFT helpers, controlled degradation generation, streaming enhancer, dataset manifests, metrics, and CLI.
+- `problem_and_literature.md`: problem definition, objectives, five-paper survey, and research gap.
+- `system_design.md`: system architecture and workflow diagram.
+- `data/README.md`: dataset collection plan and justification.
+- `evaluation_evidence.md`: requirement-to-evidence mapping.
+- `initial_results.md`: reproducible initial measurements and demonstration sequence.
 - `algorithm.md`: the implemented algorithm and its assumptions.
 - `workflow.md`: the end-to-end experiment and demonstration workflow.
 - `differences.md`: a technical comparison of five papers and this project.

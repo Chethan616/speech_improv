@@ -4,6 +4,8 @@
 
 This workflow defines the reproducible enhancement baseline and evidence package. A product UI, a full Whisper application, and final model selection are separate extensions.
 
+The system architecture and workflow diagram are documented in [system_design.md](system_design.md). The evaluation evidence map is in [evaluation_evidence.md](evaluation_evidence.md).
+
 ## 2. One-command smoke test
 
 Run the unit checks first:

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+import tempfile
 
 import numpy as np
 
 from realtime_speech_enhancement.degradation import degrade_audio
+from realtime_speech_enhancement.dataset import build_manifest
 from realtime_speech_enhancement.enhancer import EnhancerConfig, enhance_audio
 from realtime_speech_enhancement.metrics import evaluate_quality
 from realtime_speech_enhancement.stft import istft, stft
+from realtime_speech_enhancement.audio import write_wav
 
 
 class RealtimeSpeechEnhancementTests(unittest.TestCase):
@@ -40,6 +44,15 @@ class RealtimeSpeechEnhancementTests(unittest.TestCase):
         report = evaluate_quality(clean, degraded, enhanced)
         self.assertIn("snr_improvement_db", report)
         self.assertGreater(report["snr_improvement_db"], 0.0)
+
+    def test_dataset_manifest_reads_wav_headers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            write_wav(root / "clip.wav", np.zeros(1600, dtype=np.float32), 16000)
+            manifest = build_manifest(root, "fixture", "test")
+            self.assertEqual(manifest["file_count"], 1)
+            self.assertEqual(manifest["sample_rates_hz"], [16000])
+            self.assertEqual(manifest["errors"], [])
 
 
 if __name__ == "__main__":
